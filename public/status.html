@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分享管理 · 一眼即焚</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0e1013;
+    color: #e8e6e3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 48px;
+  }
+  .brand { font-size: 13px; color: #565b64; margin-bottom: 24px; letter-spacing: 2px; }
+  .brand b { color: #ff6b35; }
+  .card {
+    width: 100%; max-width: 520px;
+    background: #171a1f;
+    border: 1px solid #262b33;
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.4);
+  }
+  h2 { font-size: 18px; margin-bottom: 6px; }
+  .sub { color: #8a8f98; font-size: 13px; margin-bottom: 22px; word-break: break-all; }
+
+  .status {
+    border-radius: 12px; padding: 18px 16px;
+    text-align: center; margin-bottom: 20px;
+    border: 1px solid;
+  }
+  .status .icon { font-size: 40px; margin-bottom: 8px; }
+  .status .t { font-size: 16px; font-weight: 700; }
+  .status .d { font-size: 12px; margin-top: 6px; color: #8a8f98; line-height: 1.7; }
+  .st-wait { border-color: rgba(126,200,255,.35); background: rgba(126,200,255,.07); }
+  .st-viewed { border-color: rgba(255,107,53,.4); background: rgba(255,107,53,.08); }
+  .st-dead { border-color: rgba(140,140,140,.3); background: rgba(140,140,140,.07); }
+
+  .kv { font-size: 13px; line-height: 2; color: #8a8f98; }
+  .kv b { color: #c9cdd4; font-weight: 500; float: right; }
+
+  .btn {
+    width: 100%; margin-top: 16px;
+    border: none; border-radius: 10px;
+    padding: 12px; font-size: 14px; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-danger { background: #3a1f1a; color: #ff7a5c; border: 1px solid rgba(255,107,53,.4); }
+  .btn-danger:hover { background: #4a241d; }
+
+  .keybox { margin-top: 20px; display: none; }
+  .keybox.show { display: block; }
+  .keybox p { font-size: 12px; color: #8a8f98; margin-bottom: 8px; }
+  .keybox input {
+    width: 100%; background: #10131a; border: 1px solid #3a4049; border-radius: 8px;
+    color: #e8e6e3; padding: 10px 12px; font-size: 13px; outline: none;
+  }
+  .refresh { background: none; border: 1px solid #3a4049; color: #8a8f98; font-weight: 500; }
+  .refresh:hover { border-color: #7ec8ff; color: #7ec8ff; }
+</style>
+</head>
+<body>
+  <div class="brand">🔥 一眼<b>即焚</b> OnePeek · 分享管理</div>
+
+  <div class="card">
+    <h2>内容状态</h2>
+    <p class="sub" id="fileName">加载中…</p>
+
+    <div class="status st-wait" id="statusBox">
+      <div class="icon" id="stIcon">⏳</div>
+      <div class="t" id="stTitle">…</div>
+      <div class="d" id="stDesc"></div>
+    </div>
+
+    <div class="kv">
+      <div>文件大小 <b id="kvSize">-</b></div>
+      <div>上传时间 <b id="kvCreated">-</b></div>
+      <div>过期时间 <b id="kvExpires">-</b></div>
+      <div>查看状态 <b id="kvViewed">-</b></div>
+    </div>
+
+    <button class="btn btn-danger" id="burnBtn">🔥 立即销毁</button>
+    <button class="btn refresh" id="refreshBtn">刷新状态</button>
+
+    <div class="keybox" id="keybox">
+      <p>本浏览器没有该内容的管理密钥，请输入密钥（上传时与链接一起提供）：</p>
+      <input type="text" id="keyInput" placeholder="管理密钥 manageKey">
+    </div>
+  </div>
+
+<script>
+(function () {
+  var token = location.pathname.replace(/^\/s\//, '').replace(/\/.*$/, '');
+  var key = '';
+  try { key = localStorage.getItem('onepeek_key_' + token) || ''; } catch (e) {}
+  var urlKey = new URLSearchParams(location.search).get('k');
+  if (urlKey) {
+    key = urlKey;
+    try { localStorage.setItem('onepeek_key_' + token, key); } catch (e) {}
+  }
+
+  var keyInput = document.getElementById('keyInput');
+  var keybox = document.getElementById('keybox');
+
+  function fmtTime(ts) {
+    if (!ts) return '-';
+    var d = new Date(ts);
+    function p(n) { return n < 10 ? '0' + n : '' + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  function fmtSize(n) {
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function apply(d) {
+    document.getElementById('fileName').textContent = d.name || '';
+    document.getElementById('kvSize').textContent = fmtSize(d.size || 0);
+    document.getElementById('kvCreated').textContent = fmtTime(d.created);
+    document.getElementById('kvExpires').textContent = fmtTime(d.expires);
+
+    var box = document.getElementById('statusBox');
+    var icon = document.getElementById('stIcon');
+    var title = document.getElementById('stTitle');
+    var desc = document.getElementById('stDesc');
+    box.className = 'status';
+
+    if (d.deleted) {
+      box.classList.add('st-dead');
+      icon.textContent = '🗑️';
+      title.textContent = '已销毁';
+      desc.textContent = '内容已被销毁，任何人都无法查看。';
+      document.getElementById('kvViewed').textContent = d.consumed ? '已被查看（' + fmtTime(d.consumed) + '）' : '未被查看';
+    } else if (d.consumed) {
+      box.classList.add('st-viewed');
+      icon.textContent = '🔥';
+      title.textContent = '已被查看，已焚毁';
+      desc.textContent = '查看时间：' + fmtTime(d.consumed) + '。链接已失效，无法再次查看。';
+      document.getElementById('kvViewed').textContent = '已于 ' + fmtTime(d.consumed) + ' 被查看';
+    } else if (Date.now() > d.expires) {
+      box.classList.add('st-dead');
+      icon.textContent = '⌛';
+      title.textContent = '已过期焚毁';
+      desc.textContent = '超过保留期限未被查看，内容已自动焚毁。';
+      document.getElementById('kvViewed').textContent = '未被查看';
+    } else {
+      box.classList.add('st-wait');
+      icon.textContent = '⏳';
+      title.textContent = '等待查看';
+      desc.textContent = '链接尚未被打开，内容完好保留中。';
+      document.getElementById('kvViewed').textContent = '未被查看';
+    }
+  }
+
+  function load() {
+    var k = key || keyInput.value.trim();
+    if (!k) { keybox.classList.add('show'); return; }
+    fetch('/api/status/' + encodeURIComponent(token) + '?k=' + encodeURIComponent(k))
+      .then(function (r) { return r.json().then(function (d) { return { code: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.code === 403) { keybox.classList.add('show'); return; }
+        if (res.code !== 200) {
+          document.getElementById('stTitle').textContent = '未找到该内容';
+          return;
+        }
+        keybox.classList.remove('show');
+        apply(res.d);
+      })
+      .catch(function () {});
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  keyInput.addEventListener('change', load);
+
+  document.getElementById('burnBtn').addEventListener('click', function () {
+    var k = key || keyInput.value.trim();
+    if (!k) { keybox.classList.add('show'); return; }
+    if (!confirm('确定立即销毁？销毁后接收方将无法查看。')) return;
+    fetch('/api/delete/' + encodeURIComponent(token) + '?k=' + encodeURIComponent(k), { method: 'POST' })
+      .then(function () { load(); });
+  });
+
+  load();
+  setInterval(load, 5000);
+})();
+</script>
+</body>
+</html>

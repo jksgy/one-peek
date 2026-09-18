@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一眼即焚 · 一次性图片/视频分享</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: #0e1013;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,107,53,.15), transparent);
+    color: #e8e6e3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 48px;
+  }
+  .logo { font-size: 44px; margin-bottom: 8px; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+  h1 span { color: #ff6b35; }
+  .tagline { color: #8a8f98; margin: 10px 0 36px; font-size: 14px; text-align: center; line-height: 1.7; }
+  .tagline b { color: #ffb38a; font-weight: 600; }
+
+  .card {
+    width: 100%; max-width: 560px;
+    background: #171a1f;
+    border: 1px solid #262b33;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.4);
+  }
+
+  .dropzone {
+    border: 2px dashed #3a4049;
+    border-radius: 12px;
+    padding: 44px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: #ff6b35;
+    background: rgba(255,107,53,.06);
+  }
+  .dropzone .icon { font-size: 40px; margin-bottom: 12px; }
+  .dropzone p { color: #8a8f98; font-size: 14px; margin-top: 6px; }
+  .dropzone .main { color: #e8e6e3; font-size: 15px; font-weight: 600; }
+
+  .fileinfo {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: #1d222a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 16px;
+  }
+  .fileinfo.show { display: flex; }
+  .fileinfo .thumb {
+    width: 52px; height: 52px; border-radius: 8px;
+    object-fit: cover; background: #10131a;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .fileinfo .meta { flex: 1; min-width: 0; }
+  .fileinfo .name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fileinfo .size { font-size: 12px; color: #8a8f98; margin-top: 3px; }
+  .fileinfo button {
+    background: none; border: none; color: #8a8f98; font-size: 18px;
+    cursor: pointer; padding: 6px;
+  }
+  .fileinfo button:hover { color: #ff6b35; }
+
+  .options { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+  .options label { font-size: 13px; color: #8a8f98; }
+  select {
+    background: #10131a; color: #e8e6e3; border: 1px solid #3a4049;
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none;
+  }
+  select:focus { border-color: #ff6b35; }
+
+  .btn {
+    width: 100%; margin-top: 18px;
+    background: linear-gradient(135deg, #ff6b35, #ff8f5a);
+    color: #fff; border: none; border-radius: 10px;
+    padding: 13px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: opacity .2s, transform .1s;
+    letter-spacing: 1px;
+  }
+  .btn:hover { opacity: .92; }
+  .btn:active { transform: scale(.99); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .progress { display: none; margin-top: 18px; }
+  .progress.show { display: block; }
+  .progress .bar-bg { height: 8px; background: #10131a; border-radius: 4px; overflow: hidden; }
+  .progress .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #ff6b35, #ffb38a); transition: width .2s; }
+  .progress .ptext { font-size: 12px; color: #8a8f98; margin-top: 6px; text-align: center; }
+
+  .result { display: none; margin-top: 20px; }
+  .result.show { display: block; }
+  .result .burnt-banner {
+    background: rgba(255,107,53,.1); border: 1px solid rgba(255,107,53,.35);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #ffb38a;
+    text-align: center; margin-bottom: 16px;
+  }
+  .linkrow { margin-bottom: 12px; }
+  .linkrow .label { font-size: 12px; color: #8a8f98; margin-bottom: 6px; }
+  .linkbox {
+    display: flex; gap: 8px;
+  }
+  .linkbox input {
+    flex: 1; background: #10131a; border: 1px solid #3a4049; border-radius: 8px;
+    color: #7ec8ff; padding: 10px 12px; font-size: 13px; outline: none;
+    min-width: 0;
+  }
+  .linkbox button {
+    background: #262b33; color: #e8e6e3; border: none; border-radius: 8px;
+    padding: 0 16px; font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .linkbox button:hover { background: #ff6b35; }
+  .lan {
+    font-size: 12px; color: #8a8f98; margin-top: 10px; line-height: 1.8;
+    background: #10131a; border-radius: 8px; padding: 10px 14px;
+  }
+  .lan b { color: #7ec8ff; font-weight: 500; word-break: break-all; }
+  .again { margin-top: 14px; width: auto; background: none; border: 1px solid #3a4049; color: #8a8f98; font-weight: 500; }
+  .again:hover { border-color: #ff6b35; color: #ff6b35; opacity: 1; }
+
+  footer { margin-top: 40px; color: #565b64; font-size: 12px; text-align: center; line-height: 1.8; }
+</style>
+</head>
+<body>
+  <div class="logo">🔥</div>
+  <h1>一眼<span>即焚</span></h1>
+  <p class="tagline">
+    上传图片或视频，生成分享链接<br>
+    <b>对方打开看过一次后，内容立即焚毁</b>，再也无法查看
+  </p>
+
+  <div class="card">
+    <div class="dropzone" id="dropzone">
+      <div class="icon">📁</div>
+      <div class="main">点击选择，或拖拽图片 / 视频到这里</div>
+      <p>支持图片与视频，最大 300MB</p>
+      <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+    </div>
+
+    <div class="fileinfo" id="fileinfo">
+      <div class="thumb" id="thumb">🖼️</div>
+      <div class="meta">
+        <div class="name" id="fname"></div>
+        <div class="size" id="fsize"></div>
+      </div>
+      <button id="clearFile" title="移除">✕</button>
+    </div>
+
+    <div class="options">
+      <label for="expiry">未查看时保留</label>
+      <select id="expiry">
+        <option value="0.5">30 分钟</option>
+        <option value="1">1 小时</option>
+        <option value="6">6 小时</option>
+        <option value="24" selected>24 小时</option>
+        <option value="72">3 天</option>
+        <option value="168">7 天</option>
+      </select>
+      <label style="margin-left:auto;font-size:12px;">到期未被查看将自动焚毁</label>
+    </div>
+
+    <button class="btn" id="uploadBtn" disabled>🔥 生成一次性链接</button>
+
+    <div class="progress" id="progress">
+      <div class="bar-bg"><div class="bar" id="bar"></div></div>
+      <div class="ptext" id="ptext">上传中…</div>
+    </div>
+
+    <div class="result" id="result">
+      <div class="burnt-banner">⚠️ 链接被打开一次后即焚毁 —— 请确认发给正确的人</div>
+      <div class="linkrow">
+        <div class="label">分享链接（发给对方，只能看一次）</div>
+        <div class="linkbox">
+          <input id="shareLink" readonly>
+          <button data-copy="shareLink">复制</button>
+        </div>
+      </div>
+      <div class="linkrow">
+        <div class="label">管理链接（仅自己保存，可查看状态 / 主动销毁）</div>
+        <div class="linkbox">
+          <input id="manageLink" readonly>
+          <button data-copy="manageLink">复制</button>
+        </div>
+      </div>
+      <div class="lan" id="lan"></div>
+      <button class="btn again" id="againBtn">再分享一个</button>
+    </div>
+  </div>
+
+  <footer>
+    内容仅可被查看一次 · 服务器不会长期保留文件<br>
+    请勿用于违法用途，请尊重他人隐私
+  </footer>
+
+<script>
+(function () {
+  var dropzone = document.getElementById('dropzone');
+  var fileInput = document.getElementById('fileInput');
+  var fileinfo = document.getElementById('fileinfo');
+  var thumb = document.getElementById('thumb');
+  var fname = document.getElementById('fname');
+  var fsize = document.getElementById('fsize');
+  var clearFile = document.getElementById('clearFile');
+  var uploadBtn = document.getElementById('uploadBtn');
+  var expiry = document.getElementById('expiry');
+  var progress = document.getElementById('progress');
+  var bar = document.getElementById('bar');
+  var ptext = document.getElementById('ptext');
+  var result = document.getElementById('result');
+  var shareLink = document.getElementById('shareLink');
+  var manageLink = document.getElementById('manageLink');
+  var lanBox = document.getElementById('lan');
+
+  var file = null;
+  var previewURL = null;
+  var MAX_SIZE = 300 * 1024 * 1024;
+
+  function fmtSize(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
+  function setFile(f) {
+    if (!f) return;
+    if (!/^(image|video)\//.test(f.type)) {
+      alert('只支持图片或视频文件');
+      return;
+    }
+    if (f.size > MAX_SIZE) {
+      alert('文件过大（' + fmtSize(f.size) + '），最大支持 300MB');
+      return;
+    }
+    file = f;
+    if (previewURL) URL.revokeObjectURL(previewURL);
+    fname.textContent = f.name;
+    fsize.textContent = fmtSize(f.size) + (f.type.indexOf('video') === 0 ? ' · 视频' : ' · 图片');
+    if (f.type.indexOf('image') === 0) {
+      previewURL = URL.createObjectURL(f);
+      thumb.innerHTML = '';
+      var img = document.createElement('img');
+      img.src = previewURL;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;';
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = '🎬';
+    }
+    fileinfo.classList.add('show');
+    dropzone.style.display = 'none';
+    uploadBtn.disabled = false;
+  }
+
+  function reset() {
+    file = null;
+    if (previewURL) { URL.revokeObjectURL(previewURL); previewURL = null; }
+    fileinfo.classList.remove('show');
+    dropzone.style.display = '';
+    uploadBtn.disabled = true;
+    progress.classList.remove('show');
+    result.classList.remove('show');
+    fileInput.value = '';
+  }
+
+  dropzone.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () { setFile(this.files[0]); });
+  clearFile.addEventListener('click', reset);
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropzone.classList.add('drag');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropzone.classList.remove('drag');
+    });
+  });
+  dropzone.addEventListener('drop', function (e) {
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+
+  uploadBtn.addEventListener('click', function () {
+    if (!file) return;
+    uploadBtn.disabled = true;
+    progress.classList.add('show');
+    bar.style.width = '0%';
+    ptext.textContent = '上传中…';
+
+    var xhr = new XMLHttpRequest();
+    var qs = '?name=' + encodeURIComponent(file.name) +
+             '&type=' + encodeURIComponent(file.type) +
+             '&hours=' + encodeURIComponent(expiry.value);
+    xhr.open('POST', '/api/upload' + qs);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) {
+        var pct = Math.round(e.loaded / e.total * 100);
+        bar.style.width = pct + '%';
+        ptext.textContent = '上传中… ' + pct + '%（' + fmtSize(e.loaded) + ' / ' + fmtSize(e.total) + '）';
+      }
+    };
+
+    xhr.onload = function () {
+      uploadBtn.disabled = false;
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (xhr.status !== 200) {
+          alert(data.error || '上传失败');
+          progress.classList.remove('show');
+          return;
+        }
+        // 管理密钥保存在本机，之后打开管理链接无需手动输入
+        try { localStorage.setItem('onepeek_key_' + data.token, data.manageKey); } catch (e) {}
+
+        shareLink.value = location.origin + data.path;
+        manageLink.value = location.origin + data.managePath;
+        progress.classList.remove('show');
+        fileinfo.classList.remove('show');
+        dropzone.style.display = 'none';
+        uploadBtn.style.display = 'none';
+        result.classList.add('show');
+
+        // 局域网地址（供手机等其它设备访问）
+        fetch('/api/lan').then(function (r) { return r.json(); }).then(function (d) {
+          var lines = [];
+          if (d.addresses && d.addresses.length) {
+            lines.push('📱 其它设备（同一 WiFi）请使用：');
+            d.addresses.forEach(function (ip) {
+              lines.push('<b>http://' + ip + ':' + d.port + data.path + '</b>');
+            });
+          } else {
+            lines.push('本机未检测到局域网地址，其它设备可能无法访问');
+          }
+          lanBox.innerHTML = lines.join('<br>');
+        }).catch(function () {});
+      } catch (e) {
+        alert('上传失败：' + e.message);
+        progress.classList.remove('show');
+      }
+    };
+
+    xhr.onerror = function () {
+      uploadBtn.disabled = false;
+      progress.classList.remove('show');
+      alert('网络错误，上传失败');
+    };
+
+    xhr.send(file);
+  });
+
+  document.getElementById('againBtn').addEventListener('click', function () {
+    reset();
+    uploadBtn.style.display = '';
+    result.classList.remove('show');
+  });
+
+  document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-copy'));
+      input.select();
+      var done = function () {
+        var old = btn.textContent;
+        btn.textContent = '已复制';
+        setTimeout(function () { btn.textContent = old; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(done, function () {
+          document.execCommand('copy'); done();
+        });
+      } else {
+        document.execCommand('copy'); done();
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
