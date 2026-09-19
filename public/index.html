@@ -169,6 +169,16 @@
       <label style="margin-left:auto;font-size:12px;">到期未被查看将自动焚毁</label>
     </div>
 
+    <div class="options">
+      <label for="imgsecs">图片查看时长</label>
+      <select id="imgsecs">
+        <option value="5">5 秒</option>
+        <option value="8" selected>8 秒</option>
+        <option value="10">10 秒</option>
+      </select>
+      <label style="margin-left:auto;font-size:12px;">仅图片生效 · 查看页切屏将立即焚毁</label>
+    </div>
+
     <button class="btn" id="uploadBtn" disabled>🔥 生成一次性链接</button>
 
     <div class="progress" id="progress">
@@ -213,6 +223,7 @@
   var clearFile = document.getElementById('clearFile');
   var uploadBtn = document.getElementById('uploadBtn');
   var expiry = document.getElementById('expiry');
+  var imgsecs = document.getElementById('imgsecs');
   var progress = document.getElementById('progress');
   var bar = document.getElementById('bar');
   var ptext = document.getElementById('ptext');
@@ -326,7 +337,11 @@
         // 管理密钥保存在本机，之后打开管理链接无需手动输入
         try { localStorage.setItem('onepeek_key_' + data.token, data.manageKey); } catch (e) {}
 
-        shareLink.value = location.origin + data.path;
+        // 图片带上查看时长参数（5~10 秒后自动焚毁），视频不限时
+        var isImg = file && /^image\//.test(file.type);
+        var suffix = isImg ? '?t=' + encodeURIComponent(imgsecs.value) : '';
+
+        shareLink.value = location.origin + data.path + suffix;
         manageLink.value = location.origin + data.managePath;
         progress.classList.remove('show');
         fileinfo.classList.remove('show');
@@ -340,7 +355,7 @@
           if (d.addresses && d.addresses.length) {
             lines.push('📱 其它设备（同一 WiFi）请使用：');
             d.addresses.forEach(function (ip) {
-              lines.push('<b>http://' + ip + ':' + d.port + data.path + '</b>');
+              lines.push('<b>http://' + ip + ':' + d.port + data.path + suffix + '</b>');
             });
           } else {
             lines.push('本机未检测到局域网地址，其它设备可能无法访问');
